@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>EVT-NANTES</title>
+	<meta charset="UTF-8">
+	<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+	<script src="./main.js"></script>
+	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+	<div id="app">
+		<!--<pre>{{JsonObjectApi}}</pre>-->
+		<div v-for="item in JsonObjectApi">
+			
+			<ul>
+				<li><img :src="item.fields.media_1"/></li>
+				<li v-if="item.fields.gratuit='Oui'"> Gratuit </li>
+				<li>Lieu : {{item.fields.lieu_quartier}}</li>
+				<li>Date : {{ item.fields.date}}</li>
+				<li>Debut : {{item.fields.heure_debut}}</li>
+				<li>Description : {{ item.fields.description}}</li>
+				<li>Topic : {{ item.fields.rubrique}}</li>
+			</ul>
+			
+		</div>
+	</div>
+</body>
+
+<script type="text/javascript">
+	
+	var vm=new Vue({
+		el:'#app',
+		//props:['prop1','prop2'],
+		//components:{component1,component2},
+		data:function(){
+			return{
+				JsonObjectApi:'',
+				url:'https://data.nantesmetropole.fr/api/records/1.0/search/?dataset=244400404_agenda-evenements-nantes-nantes-metropole&facet=emetteur&facet=rubrique&facet=lieu&facet=ville'
+			}
+		},
+		methods:{
+			clickOnMessage:function(){
+				
+			}
+		},
+		created:function(){
+			
+		},
+		mounted:function(){
+			axios
+      			.get(this.url)
+      			.then(response => (this.JsonObjectApi = response.data.records))
+		},
+		updated:function(){
+			
+		},
+		watch:{
+			message:function(){
+				
+			}
+		}
+
+
+	})
+
+</script>
+</html>
