@@ -6,32 +6,79 @@
 	<script src="https://cdn.jsdelivr.net/npm/vue"></script>
 	<script src="./main.js"></script>
 	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.0.5/vue.min.js"></script>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/af.js">
+	
+	<!--<link rel="stylesheet" href="https://code.jquery.com/jquery-3.4.1.js">-->
+
 </head>
 <body>
-	<div id="app">
+	<div id="app" v-cloak>
 		<!--<pre>{{JsonObjectApi}}</pre>-->
 		
-		<div id="container">
-			<div class="box" v-for="item in JsonObjectApi" :key="item.recordid">
+		<div class="bar">
+			<input id="search" class="form-control" type="text" placeholder="🔍 - Search" aria-label="Search" v-model="input_search">
+			<span id="dateSelection">
+				Du <input class="dateSelection" type="date" v-model="start_date">
+				Au <input class="dateSelection" type="date" v-model="end_date">
+				📅
+			</span>
+			<a class="grid-icon" v-bind:class="{ 'active': layout == 'grid'}" v-on:click="layout = 'grid'"></a>
+			<a class="list-icon" v-bind:class="{ 'active': layout == 'list'}" v-on:click="layout = 'list'"></a>
+		</div>
+		
+
+
+		<div id="container" v-if="layout == 'grid'" class="grid">
+			<div class="box" v-for="item,index in JsonObjectApi" v-if="search(item.fields.nom) && dateIsValid(item.fields.date)" :key="item.recordid">
 				<ul>
 					<fieldset>
-						<legend>{{ item.fields.rubrique}}</legend>
+						<legend>{{ item.fields.nom}}</legend>
 						<li ><img class="image_box" :src="item.fields.media_1"/></li>
 
-						<img v-if="!item.itemclick" @click="box_click(item)" class="plus" src="./images/plus.png"/>
+						<img v-if="!item.itemclick" @click="box_click(index,item)" class="plus" src="./images/plus.png"/>
+
 						<div class="info_event" v-if="item.itemclick">
-							<li v-if="item.fields.gratuit='Oui'"> Gratuit </li>
-							<li>Lieu : {{item.fields.lieu_quartier}}</li>
-							<li>Date : {{ item.fields.date}}</li>
+							<li v-if="item.fields.gratuit=='oui'"> Gratuit </li>
+							<li v-else> Tatif : {{item.fields.precisions_tarifs}} </li>
+							
+							<li>Lieu : {{item.fields.ville}} - {{item.fields.lieu}}</li>
+							<li>Date : {{ displayDate(item.fields.date)}}</li>
 							<li>Debut : {{item.fields.heure_debut}}</li>
+							<li>Categorie : {{item.fields.rubrique}}</li>	
 							<li>Description : {{ item.fields.description}}</li>
+							<li>📞 : {{ item.fields.lieu_tel}}</li>
+
+							
 						</div>
+						<img v-if="item.itemclick" @click="box_click(index,item)" class="plus" src="./images/minus.png"/>
 					</fieldset>
 				</ul>
 			
 			</div>
 		</div>
+
+		<div  id="list_container" v-if="layout == 'list'" class="list">
+			<div class="box_list" v-for="item,index in JsonObjectApi" v-if="search(item.fields.nom) && dateIsValid(item.fields.date)" :key="item.recordid">	
+					<ul>
+						<div class="info_event_list">
+							<li>{{ item.fields.nom}}</li>
+							<li v-if="item.fields.gratuit=='oui'"> Gratuit </li>
+							<li v-else> Tatif : {{item.fields.precisions_tarifs}} </li>
+							
+							<li>Lieu : {{item.fields.ville}} - {{item.fields.lieu}}</li>
+							<li>Date : {{ displayDate(item.fields.date)}}</li>
+							<li>Debut : {{item.fields.heure_debut}}</li>
+							<li>Categorie : {{item.fields.rubrique}}</li>
+							<li>📞 : {{ item.fields.lieu_tel}}</li>
+								
+						</div>
+					</ul>
+			</div>
+		</div>
 	</div>
+
 </body>
 
 <script type="text/javascript">
@@ -42,14 +89,48 @@
 		//components:{component1,component2},
 		data:function(){
 			return{
+				start_date:'',
+				end_date:'',
+				date_filter:false,
+				layout: 'grid',
+				input_search:'',
 				JsonObjectApi:'',
 				url:'https://data.nantesmetropole.fr/api/records/1.0/search/?dataset=244400404_agenda-evenements-nantes-nantes-metropole&facet=emetteur&facet=rubrique&facet=lieu&facet=ville'
 			}
 		},
 		methods:{
-			box_click:function(d){
-				console.log(d)
-				d.itemclick=true;
+			box_click:function(index,item){
+				var tmp=this.JsonObjectApi[index]
+				tmp.itemclick=!item.itemclick;
+				Vue.set(this.JsonObjectApi,index,tmp)
+			},
+			search:function(d){
+				if(this.input_search.length<2)
+					return true;
+  				var filter = this.input_search.toUpperCase();
+    			if (d.toUpperCase().indexOf(filter) == -1) 
+      				return false;
+  				return true;
+
+			},
+			dateIsValid:function(d){
+				if(this.end_date.length==0 || this.start_date.length==0)
+					return true;
+				if(d<=this.end_date && d>=this.start_date)
+					return true;
+				return false;
+			},
+			displayDate:function(date){
+				var d = new Date(date),
+        		month = '' + (d.getMonth() + 1),
+        		day = '' + d.getDate(),
+        		year = d.getFullYear();
+
+    			if (month.length < 2) 
+        			month = '0' + month;
+    			if (day.length < 2) 
+	        		day = '0' + day;
+			    return [day,month,year].join('-');
 			}
 		},
 		created:function(){
@@ -74,11 +155,11 @@
 			
 		},
 		watch:{
-			JsonObjectApi:{
-				handler:function(newValue){console.log(newValue)},
+			/*JsonObjectApi:{
+				handler:function(newValue){},
 				deep:true
-			},
-			
+			},*/
+
 		}
 
 
@@ -86,24 +167,70 @@
 
 </script>
 <style type="text/css">
+	#list_container{
+		width: 850px;
+		margin:0 auto;
+	}
+
+	.ul_list_info ul{
+		float: left;
+		display: inline-block;
+		list-style: square;
+	}
+
+	.azertyui{
+		display: inline;
+	}
+	
+	.info_event_list{
+		background-color: silver;
+		padding: 2% 5%;
+		width: 550px;
+		margin: 0 auto;
+
+	}
+
 	#container{
-		width: 100%;
+		width: 70%;
 		height: 50px;
 		display: flex;
 		flex-wrap: wrap;
 		flex-direction: row;
+		align-items: flex-start;
+		align-content: stretch;
+		margin: 0 auto;
 	}
 
 	.box{
 		width: 400px;
 		margin: 0 auto;
 	}
+	.box_list{
+		width: 400px;
+		margin: 0 auto;
+	}
+
 	.image_box{
 		border: 0px black solid;
 		border-radius: 5%;
+		padding-bottom: 2%;
+	}
+
+	.image_list{
+		width: 30%;
+		border: 0px black solid;
+		border-radius: 5%;
+		padding-bottom: 2%;	
+		float: left;
+		display: inline-block;
+		
+
 	}
 
 	.box>ul{
+		list-style: none;
+	}
+	.box_list>ul{
 		list-style: none;
 	}
 
@@ -111,8 +238,68 @@
 		width: 10%;
 		margin-left: 45%;
 	}
+	.plus:hover{
+		cursor: pointer;
+	}
 
+	.bar{
+    	background-color:#5c9bb7;
+    	background-image:-webkit-linear-gradient(top, #5c9bb7, #5392ad);
+    	background-image:-moz-linear-gradient(top, #5c9bb7, #5392ad);
+    	background-image:linear-gradient(top, #5c9bb7, #5392ad);
 
+    	box-shadow: 0 1px 1px #ccc;
+    	border-radius: 2px;
+    	width: 850px;
+    	padding: 10px;
+    	margin: 45px auto 25px;
+    	/*position:relative;*/
+    	text-align:right;
+    	line-height: 1;
+    	display: flex;
+		align-items: baseline;
+    }
+
+    .bar a{
+    	background:#4987a1 center center no-repeat;
+    	width:32px;
+    	height:32px;
+    	/*display:inline-block;*/
+    	text-decoration:none !important;
+    	border-radius:2px;
+    	cursor:pointer;
+    	margin: auto 5px;
+
+    }
+
+    .bar a.active{
+    	background-color:#c14694;
+    }
+
+    .bar a.list-icon{
+    	background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOkYzNkFCQ0ZBMTBCRTExRTM5NDk4RDFEM0E5RkQ1NEZCIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOkYzNkFCQ0ZCMTBCRTExRTM5NDk4RDFEM0E5RkQ1NEZCIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6RjM2QUJDRjgxMEJFMTFFMzk0OThEMUQzQTlGRDU0RkIiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6RjM2QUJDRjkxMEJFMTFFMzk0OThEMUQzQTlGRDU0RkIiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7h1bLqAAAAWUlEQVR42mL8////BwYGBn4GCACxBRlIAIxAA/4jaXoPEkMyjJ+A/g9MDJQBRhYg8RFqMwg8RJIUINYLFDmBUi+ADQAF1n8ofk9yIAy6WPg4GgtDMRYAAgwAdLYwLAoIwPgAAAAASUVORK5CYII=);
+    }
+
+    .bar a.grid-icon{
+    	background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjBEQkMyQzE0MTBCRjExRTNBMDlGRTYyOTlBNDdCN0I4IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjBEQkMyQzE1MTBCRjExRTNBMDlGRTYyOTlBNDdCN0I4Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MERCQzJDMTIxMEJGMTFFM0EwOUZFNjI5OUE0N0I3QjgiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MERCQzJDMTMxMEJGMTFFM0EwOUZFNjI5OUE0N0I3QjgiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz4MjPshAAAAXklEQVR42mL4////h/8I8B6IGaCYKHFGEMnAwCDIAAHvgZgRyiZKnImBQsACxB+hNoDAQyQ5osQZIT4gH1DsBZABH6AB8x/JaQzEig++WPiII7Rxio/GwmCIBYAAAwAwVIzMp1R0aQAAAABJRU5ErkJggg==);
+    }
+    .bar #search{
+    	
+    	width: 350px;
+    	
+    }
+
+    .dateSelection{
+    	padding: 5px 5px;
+		margin: 8px 0;
+  		border: 1px solid #ccc;
+  		border-radius: 4px;
+  		box-sizing: border-box;
+    }
+
+    [v-cloak] {
+      display: none;
+    }
 
 </style>
 </html>
